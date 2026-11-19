@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vice City Cover Studio — GTA 6-style cover art maker</title>
+<link rel="stylesheet" href="./style.css">
+</head>
+<body>
+<main class="app">
+  <section class="panel controls" aria-label="Cover editor">
+    <h1>Vice City Cover Studio</h1>
+    <p class="tagline">Your photo + a caption = a GTA-style multi-panel poster. Pick a photo, choose a layout, export a PNG to post.</p>
+
+    <h2>1 · Photo</h2>
+    <label class="file-btn">Choose photos (up to 3)
+      <input id="photo" type="file" accept="image/*" multiple>
+    </label>
+    <p class="hint">Or drop photos straight onto the preview. Drag on the preview to reposition; click to set the crop centre.</p>
+    <div class="samples">
+      <button id="sampleBoulevard" type="button">Try sample: Boulevard</button>
+      <button id="samplePier" type="button">Try sample: Pier Sunset</button>
+    </div>
+    <div id="thumbs" class="thumbs" aria-label="Loaded photos"></div>
+
+    <h2>2 · Layout &amp; crop</h2>
+    <label>Layout
+      <select id="layout"></select>
+    </label>
+    <label>Zoom (active photo)
+      <input id="zoom" type="range" min="1" max="2.5" step="0.05" value="1">
+      <span id="zoomVal">1.00x</span>
+    </label>
+
+    <h2>3 · Caption</h2>
+    <label>Title
+      <input id="title" type="text" maxlength="40" value="Sunset Heist">
+    </label>
+    <label>Subtitle
+      <input id="subtitle" type="text" maxlength="60" value="Vice City • 2026">
+    </label>
+    <label>Lettering style
+      <select id="style">
+        <option value="sunset">Sunset gradient</option>
+        <option value="neon">Neon glow</option>
+        <option value="chrome">Chrome</option>
+      </select>
+    </label>
+    <label>Caption position
+      <select id="position">
+        <option value="bottom">Bottom</option>
+        <option value="top">Top</option>
+      </select>
+    </label>
+    <label>Title size
+      <input id="capSize" type="range" min="80" max="220" step="5" value="150">
+      <span id="capSizeVal">150px</span>
+    </label>
+    <label>Letter spacing
+      <input id="spacing" type="range" min="0" max="16" step="1" value="4">
+      <span id="spacingVal">4px</span>
+    </label>
+    <label class="check"><input id="halftone" type="checkbox"> Halftone dots overlay</label>
+
+    <h2>4 · Export</h2>
+    <label>Size
+      <select id="size"></select>
+    </label>
+    <div class="export-row">
+      <button id="export" type="button" class="primary">Export PNG</button>
+      <button id="exportAll" type="button">Export all sizes</button>
+    </div>
+    <p id="status" role="status"></p>
+    <p class="fine">Original art made in your browser — no uploads, no Rockstar logos or artwork. Font: Anton (SIL Open Font License), bundled under app/fonts.</p>
+  </section>
+
+  <section class="panel stage" aria-label="Live cover preview">
+    <canvas id="preview" width="1080" height="1080" aria-label="Live cover preview"></canvas>
+  </section>
+</main>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

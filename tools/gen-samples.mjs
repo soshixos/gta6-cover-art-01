@@ -1,0 +1,153 @@
+// Generates the two built-in sample photos for Vice City Cover Studio.
+// Builds a small HTML page that paints each scene on a canvas with plain
+// 2D drawing (gradient skies, sun, palms, buildings, neon signs, a person
+// silhouette, a pier over the sea), then renders each scene with the
+// headless Chromium shell to app/samples/<scene>.png. No stock photos,
+// no downloads, everything drawn in code.
+//
+// Usage: node tools/gen-samples.mjs   (run from the repository root)
+import { execFileSync } from 'node:child_process';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { homedir } from 'node:os';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const repo = join(here, '..');
+const shell = join(homedir(), '.cache/ms-playwright/chromium_headless_shell-1255/chrome-headless-shell-linux64/chrome-headless-shell');
+
+const sceneJs = `
+const cv = document.getElementById('scene');
+const ctx = cv.getContext('2d');
+const W = cv.width, H = cv.height;
+const scene = new URLSearchParams(location.search).get('scene') || 'boulevard';
+
+function sky(top, mid, bot) {
+  const g = ctx.createLinearGradient(0, 0, 0, H);
+  g.addColorStop(0, top); g.addColorStop(0.55, mid); g.addColorStop(1, bot);
+  ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+}
+function sun(cx, cy, r) {
+  const g = ctx.createLinearGradient(cx, cy - r, cx, cy + r);
+  g.addColorStop(0, '#ffe95e'); g.addColorStop(0.55, '#ff9a3d'); g.addColorStop(1, '#ff2d95');
+  ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+  ctx.fillStyle = g; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+  ctx.fillStyle = 'rgba(30,0,50,0.9)';
+  for (let i = 0; i < 4; i++) ctx.fillRect(cx - r, cy + r * (0.1 + i * 0.22), r * 2, r * (0.04 + i * 0.02));
+  ctx.restore();
+}
+function palm(x, y, s, lean) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(lean); ctx.scale(s, s);
+  ctx.strokeStyle = '#12041f'; ctx.fillStyle = '#12041f'; ctx.lineWidth = 9; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(0, 0); ctx.quadraticCurveTo(12, -90, 5, -170); ctx.stroke();
+  ctx.translate(5, -170);
+  for (let i = 0; i < 7; i++) {
+    ctx.save(); ctx.rotate(-0.25 - i * Math.PI / 7.2);
+    ctx.beginPath(); ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(55, -18, 105, 28); ctx.quadraticCurveTo(50, 12, 0, 0);
+    ctx.fill(); ctx.restore();
+  }
+  ctx.restore();
+}
+function neonSign(x, y, w, h, text, color) {
+  ctx.save();
+  ctx.shadowColor = color; ctx.shadowBlur = 22;
+  ctx.strokeStyle = color; ctx.lineWidth = 4;
+  ctx.strokeRect(x, y, w, h);
+  ctx.fillStyle = color;
+  ctx.font = 'bold 34px Arial, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText(text, x + w / 2, y + h / 2);
+  ctx.restore();
+}
+function person(cx, baseY, s) {
+  ctx.save(); ctx.translate(cx, baseY); ctx.scale(s, s);
+  ctx.fillStyle = '#14042a';
+  ctx.beginPath(); ctx.arc(0, -210, 26, 0, Math.PI * 2); ctx.fill();           // head
+  ctx.beginPath(); ctx.moveTo(-34, -180);                                      // jacket torso
+  ctx.quadraticCurveTo(0, -200, 34, -180); ctx.lineTo(26, -60);
+  ctx.quadraticCurveTo(0, -48, -26, -60); ctx.closePath(); ctx.fill();
+  ctx.fillRect(-30, -64, 12, 64); ctx.fillRect(18, -64, 12, 64);              // legs
+  ctx.save(); ctx.translate(-34, -172); ctx.rotate(0.5);                       // raised arm
+  ctx.fillRect(-7, -70, 14, 70); ctx.restore();
+  ctx.restore();
+}
+
+if (scene === 'boulevard') {
+  sky('#1d0b45', '#c22a7a', '#ff8a3d');
+  sun(W * 0.68, H * 0.30, 150);
+  // Art-deco towers left and right with lit windows.
+  ctx.fillStyle = '#1a0633';
+  ctx.fillRect(0, H * 0.22, W * 0.30, H * 0.78);
+  ctx.fillRect(W * 0.72, H * 0.14, W * 0.28, H * 0.86);
+  ctx.fillStyle = '#ffd166';
+  for (let r = 0; r < 9; r++) for (let c = 0; c < 4; c++)
+    if ((r + c) % 2 === 0) ctx.fillRect(18 + c * 62, H * 0.26 + r * 62, 30, 38);
+  for (let r = 0; r < 10; r++) for (let c = 0; c < 4; c++)
+    if ((r * c) % 3 === 0) ctx.fillRect(W * 0.74 + 16 + c * 62, H * 0.18 + r * 62, 30, 38);
+  neonSign(W * 0.06, H * 0.30, 210, 70, 'VICE', '#ff2d95');
+  neonSign(W * 0.74, H * 0.42, 220, 70, 'HOTEL', '#00e5ff');
+  neonSign(W * 0.36, H * 0.52, 300, 64, 'BOULEVARD', '#ffe95e');
+  // Street with wet reflections.
+  const road = ctx.createLinearGradient(0, H * 0.72, 0, H);
+  road.addColorStop(0, '#3d1458'); road.addColorStop(1, '#12041f');
+  ctx.fillStyle = road; ctx.fillRect(0, H * 0.72, W, H * 0.28);
+  ctx.fillStyle = 'rgba(255,45,149,0.35)';
+  ctx.fillRect(W * 0.1, H * 0.74, 180, 10); ctx.fillRect(W * 0.62, H * 0.78, 220, 10);
+  ctx.fillStyle = 'rgba(255,233,94,0.5)';
+  ctx.fillRect(W * 0.42, H * 0.76, 160, 8);
+  person(W * 0.5, H * 0.99, 1.5);
+  palm(70, H * 0.99, 1.1, 0.12);
+  palm(W - 60, H * 0.99, 0.95, -0.14);
+} else {
+  sky('#160a3d', '#d63d7f', '#ff9a3d');
+  sun(W * 0.5, H * 0.34, 170);
+  // Sea with sun glitter.
+  const sea = ctx.createLinearGradient(0, H * 0.55, 0, H);
+  sea.addColorStop(0, '#ff7a5e'); sea.addColorStop(0.4, '#7a2a6e'); sea.addColorStop(1, '#1d0b45');
+  ctx.fillStyle = sea; ctx.fillRect(0, H * 0.55, W, H * 0.45);
+  ctx.fillStyle = 'rgba(255,233,94,0.55)';
+  for (let i = 0; i < 26; i++) {
+    const y = H * 0.57 + i * 22;
+    const wdt = 60 + (i % 5) * 46;
+    ctx.fillRect(W / 2 - wdt / 2 + ((i * 37) % 90 - 45), y, wdt, 7);
+  }
+  // Wooden pier planks leading to the viewer.
+  ctx.fillStyle = '#2a1408';
+  ctx.beginPath(); ctx.moveTo(W * 0.44, H * 0.62); ctx.lineTo(W * 0.56, H * 0.62);
+  ctx.lineTo(W * 0.86, H); ctx.lineTo(W * 0.14, H); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = '#4a2a12'; ctx.lineWidth = 5;
+  for (let i = 0; i < 9; i++) {
+    const t = i / 8, y = H * 0.62 + t * H * 0.38;
+    const x1 = W * (0.44 - t * 0.30), x2 = W * (0.56 + t * 0.30);
+    ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+  }
+  ctx.fillStyle = '#1a0d05';
+  ctx.fillRect(W * 0.36, H * 0.60, 14, H * 0.40);
+  ctx.fillRect(W * 0.62, H * 0.60, 14, H * 0.40);
+  neonSign(W * 0.30, H * 0.44, 300, 60, 'PIER 66', '#00e5ff');
+  palm(80, H * 0.62, 1.0, 0.10);
+  palm(W - 70, H * 0.62, 0.9, -0.12);
+  // A lone figure at the pier end, looking at the sun.
+  person(W * 0.5, H * 0.66, 0.55);
+}
+window.__sceneReady = true;
+`;
+
+const page = `<!doctype html><html><head><meta charset="utf-8"><style>html,body{margin:0;padding:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="scene" width="1080" height="1350"></canvas><script>${sceneJs}</script></body></html>`;
+
+mkdirSync(join(repo, 'app', 'samples'), { recursive: true });
+const tmpPage = join(repo, 'tools', 'samples.html');
+writeFileSync(tmpPage, page);
+
+for (const scene of ['boulevard', 'pier']) {
+  const out = join(repo, 'app', 'samples', `${scene}.png`);
+  execFileSync(shell, [
+    '--headless', '--disable-gpu', '--no-sandbox', '--hide-scrollbars',
+    '--window-size=1080,1350', '--virtual-time-budget=5000',
+    `--screenshot=${out}`,
+    `file://${tmpPage}?scene=${scene}`,
+  ], { stdio: 'inherit' });
+  console.log('wrote', out);
+}
+console.log('samples done');
